@@ -76,6 +76,18 @@ function safeFilePart(value) {
   return encodeURIComponent(cleaned || 'entry').slice(0, 80)
 }
 
+function blobToBase64(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      const result = String(reader.result || '')
+      resolve(result.includes(',') ? result.split(',')[1] : result)
+    }
+    reader.onerror = () => reject(new Error('录音读取失败，请重录一次。'))
+    reader.readAsDataURL(blob)
+  })
+}
+
 function formatSeconds(seconds) {
   const minutes = Math.floor(seconds / 60)
   const rest = seconds % 60
@@ -339,13 +351,23 @@ function App() {
       let uploadedAudioUrl = null
 
       if (audioBlob) {
-        const { upload } = await import('@vercel/blob/client')
-        const blobResult = await upload(`audio/${createdAt}-${safeFilePart(hanzi)}.webm`, audioBlob, {
-          access: 'public',
-          contentType: 'audio/webm',
-          handleUploadUrl: '/api/upload-audio',
+        const base64Audio = await blobToBase64(audioBlob)
+        const uploadResponse = await fetch('/api/upload-audio', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            pathname: `audio/${createdAt}-${safeFilePart(hanzi)}.webm`,
+            contentType: 'audio/webm',
+            data: base64Audio,
+          }),
         })
-        uploadedAudioUrl = blobResult.url
+
+        const uploadResult = await uploadResponse.json()
+        if (!uploadResponse.ok) {
+          throw new Error(uploadResult.error || '录音上传失败')
+        }
+
+        uploadedAudioUrl = uploadResult.url
       }
 
       const { createEntry } = await import('./firebase')
