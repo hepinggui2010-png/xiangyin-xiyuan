@@ -1,9 +1,5 @@
 import { handleUpload } from '@vercel/blob/client'
 
-export const config = {
-  runtime: 'edge',
-}
-
 export default async function handler(request) {
   const body = await request.json()
 
