@@ -88,6 +88,22 @@ function blobToBase64(blob) {
   })
 }
 
+async function fetchWithTimeout(url, options, timeoutMs = 25000) {
+  const controller = new AbortController()
+  const timeout = window.setTimeout(() => controller.abort(), timeoutMs)
+
+  try {
+    return await fetch(url, { ...options, signal: controller.signal })
+  } catch (error) {
+    if (error.name === 'AbortError') {
+      throw new Error('录音上传等待太久，请检查网络后再试。')
+    }
+    throw error
+  } finally {
+    window.clearTimeout(timeout)
+  }
+}
+
 function formatSeconds(seconds) {
   const minutes = Math.floor(seconds / 60)
   const rest = seconds % 60
@@ -352,7 +368,7 @@ function App() {
 
       if (audioBlob) {
         const base64Audio = await blobToBase64(audioBlob)
-        const uploadResponse = await fetch('/api/upload-audio', {
+        const uploadResponse = await fetchWithTimeout('/api/upload-audio', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
