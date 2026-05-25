@@ -1,0 +1,52 @@
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-width: 320px;
+  background: #0E0C09;
+  color: #F0E6C8;
+  font-family: "Noto Serif SC", "Songti SC", SimSun, serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+button,
+input,
+textarea,
+select {
+  font-family: inherit;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.66;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #7a6a4a;
+}
+
+select option {
+  background: #161208;
+  color: #F0E6C8;
+}
+
+audio {
+  accent-color: #D4AF37;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="乡音溪源">
+  <rect width="64" height="64" rx="12" fill="#0E0C09"/>
+  <path d="M14 48c8-10 17-12 28-8 4 1 7 0 9-3" fill="none" stroke="#D4AF37" stroke-width="4" stroke-linecap="round"/>
+  <path d="M17 20c6-5 13-6 20-3 5 2 9 1 12-2" fill="none" stroke="#F0E6C8" stroke-width="3" stroke-linecap="round" opacity=".85"/>
+  <circle cx="24" cy="31" r="4" fill="#D4AF37"/>
+  <circle cx="39" cy="30" r="3" fill="#B8A070"/>
+</svg>
