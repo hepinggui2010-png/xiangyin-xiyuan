@@ -15,6 +15,7 @@ export default async function handler(request) {
         return {
           allowedContentTypes: ['audio/webm'],
           addRandomSuffix: true,
+          callbackUrl: new URL('/api/upload-audio', request.url).toString(),
           tokenPayload: JSON.stringify({ pathname }),
         }
       },
