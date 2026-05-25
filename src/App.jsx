@@ -104,6 +104,17 @@ async function fetchWithTimeout(url, options, timeoutMs = 25000) {
   }
 }
 
+function withTimeout(promise, timeoutMs, message) {
+  let timeoutId
+  const timeoutPromise = new Promise((_, reject) => {
+    timeoutId = window.setTimeout(() => reject(new Error(message)), timeoutMs)
+  })
+
+  return Promise.race([promise, timeoutPromise]).finally(() => {
+    window.clearTimeout(timeoutId)
+  })
+}
+
 function formatSeconds(seconds) {
   const minutes = Math.floor(seconds / 60)
   const rest = seconds % 60
@@ -131,6 +142,7 @@ function App() {
   const [formError, setFormError] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [submitStatus, setSubmitStatus] = useState('')
   const [recording, setRecording] = useState(false)
   const [recordSeconds, setRecordSeconds] = useState(0)
   const [waveBars, setWaveBars] = useState(Array.from({ length: 24 }, () => 12))
@@ -349,6 +361,7 @@ function App() {
     event.preventDefault()
     setFormError('')
     setSuccessMessage('')
+    setSubmitStatus('')
 
     const hanzi = cleanText(form.hanzi)
     const mandarin = cleanText(form.mandarin)
@@ -367,7 +380,9 @@ function App() {
       let uploadedAudioUrl = null
 
       if (audioBlob) {
+        setSubmitStatus('正在读取录音')
         const base64Audio = await blobToBase64(audioBlob)
+        setSubmitStatus('正在上传录音')
         const uploadResponse = await fetchWithTimeout('/api/upload-audio', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -386,29 +401,36 @@ function App() {
         uploadedAudioUrl = uploadResult.url
       }
 
+      setSubmitStatus('正在保存词条')
       const { createEntry } = await import('./firebase')
-      await createEntry({
-        hanzi,
-        mandarin,
-        pinyin: cleanText(form.pinyin),
-        village: form.village,
-        villageCustom,
-        villageLabel,
-        contributor: cleanText(form.contributor) || '匿名',
-        audioUrl: uploadedAudioUrl,
-        likes: 0,
-        timestamp: todayString(new Date(createdAt)),
-        createdAt,
-      })
+      await withTimeout(
+        createEntry({
+          hanzi,
+          mandarin,
+          pinyin: cleanText(form.pinyin),
+          village: form.village,
+          villageCustom,
+          villageLabel,
+          contributor: cleanText(form.contributor) || '匿名',
+          audioUrl: uploadedAudioUrl,
+          likes: 0,
+          timestamp: todayString(new Date(createdAt)),
+          createdAt,
+        }),
+        25000,
+        '词条保存等待太久，请检查 Firebase 权限后再试。',
+      )
 
       setForm(EMPTY_FORM)
       clearRecording()
+      setSubmitStatus('')
       setSuccessMessage('词条已保存到乡音溪源。')
       setActiveTab('library')
     } catch (error) {
       setFormError(error.message || '提交失败，请稍后再试。')
     } finally {
       setSubmitting(false)
+      setSubmitStatus('')
     }
   }
 
@@ -445,6 +467,7 @@ function App() {
               formError={formError}
               successMessage={successMessage}
               submitting={submitting}
+              submitStatus={submitStatus}
               recording={recording}
               recordSeconds={recordSeconds}
               waveBars={waveBars}
@@ -511,6 +534,7 @@ function RecordView({
   formError,
   successMessage,
   submitting,
+  submitStatus,
   recording,
   recordSeconds,
   waveBars,
@@ -647,6 +671,7 @@ function RecordView({
 
       {formError && <p style={styles.errorText}>{formError}</p>}
       {successMessage && <p style={styles.successText}>{successMessage}</p>}
+      {submitting && submitStatus && <p style={styles.statusText}>{submitStatus}</p>}
 
       <button type="submit" disabled={submitting || recording} style={styles.submitButton}>
         {submitting ? <Loader2 size={18} style={styles.spinIcon} /> : <Send size={18} />}
@@ -1074,6 +1099,12 @@ const styles = {
     display: 'inline-flex',
     alignItems: 'center',
     gap: 6,
+  },
+  statusText: {
+    margin: 0,
+    color: palette.goldSoft,
+    fontSize: 13,
+    lineHeight: 1.45,
   },
   submitButton: {
     minHeight: 50,
