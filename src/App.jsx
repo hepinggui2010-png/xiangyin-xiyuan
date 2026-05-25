@@ -1,4 +1,3 @@
-import { upload } from '@vercel/blob/client'
 import {
   AudioLines,
   BarChart3,
@@ -17,7 +16,6 @@ import {
   Volume2,
 } from 'lucide-react'
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { createEntry, likeEntry, subscribeToEntries } from './firebase'
 
 const VILLAGES = [
   '溪源村',
@@ -124,19 +122,34 @@ function App() {
   const analyserRef = useRef(null)
 
   useEffect(() => {
-    const unsubscribe = subscribeToEntries(
-      (items) => {
-        setEntries(items)
-        setLoadingEntries(false)
-        setLoadError('')
-      },
-      (error) => {
+    let unsubscribe = () => undefined
+    let cancelled = false
+
+    import('./firebase')
+      .then(({ subscribeToEntries }) => {
+        if (cancelled) return
+        unsubscribe = subscribeToEntries(
+          (items) => {
+            setEntries(items)
+            setLoadingEntries(false)
+            setLoadError('')
+          },
+          (error) => {
+            setLoadError(error.message || '词库加载失败')
+            setLoadingEntries(false)
+          },
+        )
+      })
+      .catch((error) => {
+        if (cancelled) return
         setLoadError(error.message || '词库加载失败')
         setLoadingEntries(false)
-      },
-    )
+      })
 
-    return () => unsubscribe()
+    return () => {
+      cancelled = true
+      unsubscribe()
+    }
   }, [])
 
   useEffect(() => {
@@ -326,6 +339,7 @@ function App() {
       let uploadedAudioUrl = null
 
       if (audioBlob) {
+        const { upload } = await import('@vercel/blob/client')
         const blobResult = await upload(`audio/${createdAt}-${safeFilePart(hanzi)}.webm`, audioBlob, {
           access: 'public',
           contentType: 'audio/webm',
@@ -334,6 +348,7 @@ function App() {
         uploadedAudioUrl = blobResult.url
       }
 
+      const { createEntry } = await import('./firebase')
       await createEntry({
         hanzi,
         mandarin,
@@ -363,6 +378,7 @@ function App() {
     if (likedIds.has(entryId)) return
 
     try {
+      const { likeEntry } = await import('./firebase')
       await likeEntry(entryId)
       const next = new Set(likedIds)
       next.add(entryId)
